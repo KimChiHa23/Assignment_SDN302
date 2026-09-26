@@ -21,22 +21,22 @@ export default function DeleteConfirmModal({
   if (!isOpen || !task) return null;
 
   return (
-    <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs duration-200">
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-3xl border border-purple-100 bg-white p-6 shadow-2xl dark:border-purple-900/70 dark:bg-[#181328]">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
             <AlertTriangle className="h-6 w-6" />
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Task</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-slate-500 dark:text-purple-200/80">
               Are you sure you want to delete this task?
             </p>
           </div>
         </div>
 
-        <div className="my-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+        <div className="my-4 rounded-2xl bg-purple-50/50 p-3.5 border border-purple-100 dark:border-purple-900/50 dark:bg-[#201836]">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">
             &quot;{task.title}&quot;
           </p>
         </div>
@@ -50,7 +50,7 @@ export default function DeleteConfirmModal({
             type="button"
             disabled={isDeleting}
             onClick={onClose}
-            className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-purple-50 hover:text-purple-700 dark:text-purple-200 dark:hover:bg-purple-950/60 dark:hover:text-white"
           >
             Cancel
           </button>
@@ -58,7 +58,7 @@ export default function DeleteConfirmModal({
             type="button"
             disabled={isDeleting}
             onClick={onConfirm}
-            className="flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-rose-600/30 hover:bg-rose-500 disabled:opacity-60"
           >
             {isDeleting ? (
               <>

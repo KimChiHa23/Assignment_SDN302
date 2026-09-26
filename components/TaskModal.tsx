@@ -76,92 +76,96 @@ function TaskEditForm({
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-4">
       {error && (
-        <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-3.5 text-sm text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+        <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-3.5 text-sm text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
+      {/* Task Title */}
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/60 dark:text-purple-300/70">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
           Task Title <span className="text-rose-500">*</span>
         </label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1.5 block w-full rounded-2xl border border-purple-100 bg-purple-50/20 px-3.5 py-2 text-sm text-slate-900 focus:border-purple-400 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-300/25 dark:border-purple-900/50 dark:bg-purple-950/20 dark:text-white"
+          className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-300/30 dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:placeholder:text-purple-300/40 dark:focus:border-purple-400 dark:focus:bg-[#261d42]"
         />
       </div>
 
+      {/* Description */}
       <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/60 dark:text-purple-300/70">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
           Description
         </label>
         <textarea
           rows={3}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="mt-1.5 block w-full rounded-2xl border border-purple-100 bg-purple-50/20 px-3.5 py-2 text-sm text-slate-900 focus:border-purple-400 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-300/25 dark:border-purple-900/50 dark:bg-purple-950/20 dark:text-white"
+          placeholder="Enter task details..."
+          className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-300/30 dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:placeholder:text-purple-300/40 dark:focus:border-purple-400 dark:focus:bg-[#261d42]"
         />
       </div>
 
+      {/* Options: Status, Priority, Due Date */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/60 dark:text-purple-300/70">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
             Status
           </label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="mt-1.5 block w-full rounded-2xl border border-purple-100 bg-purple-50/20 px-3 py-2 text-sm text-slate-900 focus:border-purple-400 dark:border-purple-900/50 dark:bg-purple-950/20 dark:text-white"
+            className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-medium text-slate-900 focus:border-purple-500 focus:bg-white dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:focus:bg-[#261d42]"
           >
-            <option value="To Do">To Do</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Done">Done</option>
+            <option value="To Do" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">To Do</option>
+            <option value="In Progress" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">In Progress</option>
+            <option value="Done" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">Done</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/60 dark:text-purple-300/70">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
             Priority
           </label>
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
-            className="mt-1.5 block w-full rounded-2xl border border-purple-100 bg-purple-50/20 px-3 py-2 text-sm text-slate-900 focus:border-purple-400 dark:border-purple-900/50 dark:bg-purple-950/20 dark:text-white"
+            className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-medium text-slate-900 focus:border-purple-500 focus:bg-white dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:focus:bg-[#261d42]"
           >
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
+            <option value="Low" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">Low</option>
+            <option value="Medium" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">Medium</option>
+            <option value="High" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">High</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/60 dark:text-purple-300/70">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
             Due Date
           </label>
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="mt-1.5 block w-full rounded-2xl border border-purple-100 bg-purple-50/20 px-3 py-2 text-sm text-slate-900 focus:border-purple-400 dark:border-purple-900/50 dark:bg-purple-950/20 dark:text-white"
+            className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-medium text-slate-900 focus:border-purple-500 focus:bg-white dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:focus:bg-[#261d42] [color-scheme:light] dark:[color-scheme:dark]"
           />
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-purple-100 dark:border-purple-950/60">
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-purple-100 dark:border-purple-900/50">
         <button
           type="button"
           onClick={onClose}
-          className="rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-purple-50 dark:text-slate-400 dark:hover:bg-purple-950"
+          className="rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-purple-50 hover:text-purple-700 dark:text-purple-200 dark:hover:bg-purple-950/60 dark:hover:text-white"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex items-center gap-2 rounded-2xl bg-purple-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-purple-300/30 transition-all hover:bg-purple-600 disabled:opacity-60 dark:bg-purple-600 dark:hover:bg-purple-500"
+          className="flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-500 active:bg-purple-700 disabled:opacity-60"
         >
           {isSubmitting ? (
             <>
@@ -189,10 +193,10 @@ export default function TaskModal({
   if (!isOpen || !task) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl border border-purple-100 bg-white p-6 shadow-2xl dark:border-purple-900/60 dark:bg-[#181428]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg rounded-3xl border border-purple-100 bg-white p-6 shadow-2xl dark:border-purple-900/70 dark:bg-[#181328]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-purple-100 pb-4 dark:border-purple-950/60">
+        <div className="flex items-center justify-between border-b border-purple-100 pb-4 dark:border-purple-900/50">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Task</h3>
           <button
             type="button"
