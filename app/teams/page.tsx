@@ -228,7 +228,7 @@ export default function TeamsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search teams by name or description..."
-            className="block w-full rounded-2xl border border-slate-200 bg-white/80 py-2.5 pr-4 pl-10 text-xs text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#181428] dark:text-white"
+            className="block w-full rounded-2xl border border-slate-200 bg-white/80 py-2.5 pr-4 pl-10 text-xs text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#181428] dark:focus:bg-[#201836] dark:text-white dark:placeholder:text-slate-500"
           />
         </div>
       </div>

@@ -532,7 +532,7 @@ export default function TeamDetailPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search tasks by title, description..."
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-1.5 pr-3 pl-9 text-xs text-slate-900 focus:border-purple-500 focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-[#141022] dark:text-white"
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-1.5 pr-3 pl-9 text-xs text-slate-900 focus:border-purple-500 focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-[#141022] dark:focus:bg-[#201836] dark:text-white dark:placeholder:text-slate-500"
               />
             </div>
 
@@ -775,7 +775,7 @@ export default function TeamDetailPage() {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="member-email@example.com"
-                  className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-hidden dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900 focus:border-purple-500 focus:outline-hidden dark:border-slate-800 dark:bg-[#141022] dark:focus:bg-[#201836] dark:text-white dark:placeholder:text-slate-500"
                 />
                 <button
                   type="submit"
