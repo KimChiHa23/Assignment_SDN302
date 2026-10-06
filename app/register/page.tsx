@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Lock, Mail, ArrowRight, AlertCircle, Eye, EyeOff, CheckSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Lock, Mail, User, ArrowRight, AlertCircle, Eye, EyeOff, CheckSquare } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
-function LoginForm() {
+export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/teams";
-  const { login } = useAuth();
+  const { register } = useAuth();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,22 +22,44 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
 
-    if (!email.trim() || !password) {
-      setError("Please enter both email and password.");
+    // Validation
+    if (!name.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
+
+    if (!email.trim() || !email.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const res = await login({ email: email.trim(), password });
+      const res = await register({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+      });
+
       if (res.success) {
-        router.push(callbackUrl);
+        // Automatically redirects to /teams after successful registration
+        router.push("/teams");
         router.refresh();
       } else {
-        setError(res.error || "Invalid email or password.");
+        setError(res.error || "Registration failed. Please try again.");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to sign in";
+      const msg = err instanceof Error ? err.message : "Registration failed";
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -53,10 +75,10 @@ function LoginForm() {
             <CheckSquare className="h-7 w-7" />
           </div>
           <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Sign In to TaskFlow
+            Create an Account
           </h1>
           <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-            Collaborative team & task management platform
+            Start managing your team projects and tasks today
           </p>
         </div>
 
@@ -70,6 +92,25 @@ function LoginForm() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div>
+            <label className="block text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-300">
+              Full Name
+            </label>
+            <div className="relative mt-1.5">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <User className="h-4 w-4" />
+              </div>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pr-4 pl-10 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-300">
               Email Address
@@ -91,7 +132,7 @@ function LoginForm() {
 
           <div>
             <label className="block text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-300">
-              Password
+              Password (at least 6 characters)
             </label>
             <div className="relative mt-1.5">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
@@ -115,6 +156,25 @@ function LoginForm() {
             </div>
           </div>
 
+          <div>
+            <label className="block text-xs font-bold tracking-wider text-slate-600 uppercase dark:text-slate-300">
+              Confirm Password
+            </label>
+            <div className="relative mt-1.5">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <Lock className="h-4 w-4" />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pr-4 pl-10 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -123,11 +183,11 @@ function LoginForm() {
             {isSubmitting ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Signing in...</span>
+                <span>Creating account...</span>
               </>
             ) : (
               <>
-                <span>Sign In</span>
+                <span>Sign Up & Get Started</span>
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -136,23 +196,15 @@ function LoginForm() {
 
         {/* Footer info */}
         <div className="mt-8 border-t border-slate-100 pt-6 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-          Don&apos;t have an account?{" "}
+          Already have an account?{" "}
           <Link
-            href="/register"
+            href="/login"
             className="font-bold text-purple-600 hover:text-purple-700 hover:underline dark:text-purple-400"
           >
-            Create an account
+            Sign in here
           </Link>
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen" />}>
-      <LoginForm />
-    </Suspense>
   );
 }
