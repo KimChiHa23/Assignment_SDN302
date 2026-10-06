@@ -11,7 +11,7 @@ export default function Footer() {
             </div>
             <span className="font-semibold text-slate-900 dark:text-white">TaskFlow</span>
             <span className="text-xs text-purple-700/80 dark:text-purple-300/80">
-              — Assignment 1 – Task & Team Management App (SDN302)
+              — Assignment 2 – Task & Team Management App (SDN302)
             </span>
           </div>
 

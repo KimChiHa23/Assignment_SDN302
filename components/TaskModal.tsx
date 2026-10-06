@@ -1,31 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { X, Loader2, Save, AlertCircle } from "lucide-react";
+import { X, CheckSquare, AlertCircle, Save, Calendar, User, Flag, Clock } from "lucide-react";
 import { TaskItem } from "@/types/task";
+import { TeamMemberItem } from "@/types/team";
 
 interface TaskModalProps {
   isOpen: boolean;
-  task: TaskItem | null;
+  mode: "create" | "edit";
+  teamId: string;
+  teamMembers?: TeamMemberItem[];
+  task?: TaskItem | null;
   onClose: () => void;
-  onTaskUpdated: (updatedTask: TaskItem) => void;
+  onSuccess: (task: TaskItem) => void;
 }
 
-function TaskEditForm({
+function TaskModalDialog({
+  mode,
+  teamId,
+  teamMembers = [],
   task,
   onClose,
-  onTaskUpdated,
-}: {
-  task: TaskItem;
-  onClose: () => void;
-  onTaskUpdated: (updatedTask: TaskItem) => void;
-}) {
-  const [title, setTitle] = useState(task.title || "");
-  const [description, setDescription] = useState(task.description || "");
-  const [status, setStatus] = useState(task.status || "To Do");
-  const [priority, setPriority] = useState(task.priority || "Medium");
+  onSuccess,
+}: TaskModalProps) {
+  const [title, setTitle] = useState(
+    mode === "edit" && task ? task.title || "" : ""
+  );
+  const [description, setDescription] = useState(
+    mode === "edit" && task ? task.description || "" : ""
+  );
+  const [status, setStatus] = useState(
+    mode === "edit" && task ? task.status || "To Do" : "To Do"
+  );
+  const [priority, setPriority] = useState(
+    mode === "edit" && task ? task.priority || "Medium" : "Medium"
+  );
   const [dueDate, setDueDate] = useState(
-    task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : ""
+    mode === "edit" && task && task.dueDate
+      ? new Date(task.dueDate).toISOString().split("T")[0]
+      : ""
+  );
+  const [assigneeId, setAssigneeId] = useState(
+    mode === "edit" && task ? task.assigneeId || "" : ""
   );
 
   const [error, setError] = useState<string | null>(null);
@@ -36,185 +52,228 @@ function TaskEditForm({
     setError(null);
 
     if (!title.trim()) {
-      setError("Task title is required!");
+      setError("Task title is required.");
       return;
     }
 
     try {
       setIsSubmitting(true);
+      const url =
+        mode === "create"
+          ? `/api/teams/${teamId}/tasks`
+          : `/api/tasks/${task?.id}`;
+      const method = mode === "create" ? "POST" : "PUT";
 
-      const response = await fetch(`/api/tasks/${task.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim() || null,
           status,
           priority,
           dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          assigneeId: assigneeId || null,
         }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to update task");
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Operation failed");
       }
 
-      onTaskUpdated(result.data);
+      onSuccess(data.data);
       onClose();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An error occurred while updating task";
-      setError(message);
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-      {error && (
-        <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-3.5 text-sm text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+        onClick={onClose}
+      />
 
-      {/* Task Title */}
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
-          Task Title <span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-300/30 dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:placeholder:text-purple-300/40 dark:focus:border-purple-400 dark:focus:bg-[#261d42]"
-        />
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
-          Description
-        </label>
-        <textarea
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Enter task details..."
-          className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-300/30 dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:placeholder:text-purple-300/40 dark:focus:border-purple-400 dark:focus:bg-[#261d42]"
-        />
-      </div>
-
-      {/* Options: Status, Priority, Due Date */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
-            Status
-          </label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-medium text-slate-900 focus:border-purple-500 focus:bg-white dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:focus:bg-[#261d42]"
-          >
-            <option value="To Do" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">To Do</option>
-            <option value="In Progress" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">In Progress</option>
-            <option value="Done" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">Done</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
-            Priority
-          </label>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-            className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-medium text-slate-900 focus:border-purple-500 focus:bg-white dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:focus:bg-[#261d42]"
-          >
-            <option value="Low" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">Low</option>
-            <option value="Medium" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">Medium</option>
-            <option value="High" className="bg-white text-slate-900 dark:bg-[#1a142c] dark:text-white">High</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-purple-900/70 dark:text-purple-200">
-            Due Date
-          </label>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="mt-1.5 block w-full rounded-2xl border border-purple-200 bg-purple-50/30 px-3 py-2 text-sm font-medium text-slate-900 focus:border-purple-500 focus:bg-white dark:border-purple-800/80 dark:bg-[#201836] dark:text-white dark:focus:bg-[#261d42] [color-scheme:light] dark:[color-scheme:dark]"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-purple-100 dark:border-purple-900/50">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-purple-50 hover:text-purple-700 dark:text-purple-200 dark:hover:bg-purple-950/60 dark:hover:text-white"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-purple-500/30 transition-all hover:bg-purple-500 active:bg-purple-700 disabled:opacity-60"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Saving...</span>
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              <span>Save Changes</span>
-            </>
-          )}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export default function TaskModal({
-  isOpen,
-  task,
-  onClose,
-  onTaskUpdated,
-}: TaskModalProps) {
-  if (!isOpen || !task) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl border border-purple-100 bg-white p-6 shadow-2xl dark:border-purple-900/70 dark:bg-[#181328]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-purple-100 pb-4 dark:border-purple-900/50">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Edit Task</h3>
+      {/* Modal Dialog */}
+      <div className="relative z-10 w-full max-w-xl rounded-3xl border border-purple-100 bg-white p-6 shadow-2xl dark:border-purple-950 dark:bg-[#181428] sm:p-8">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-500 to-indigo-500 text-white shadow-md shadow-purple-500/20">
+              <CheckSquare className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                {mode === "create" ? "Create New Task" : "Edit Task"}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {mode === "create"
+                  ? "Any team member can create tasks"
+                  : "Update progress, priority, or assignee"}
+              </p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-950/60 dark:hover:text-purple-300"
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Task Form with key to reset state */}
-        <TaskEditForm
-          key={task.id}
-          task={task}
-          onClose={onClose}
-          onTaskUpdated={onTaskUpdated}
-        />
+        {error && (
+          <div className="mt-4 flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/60 dark:text-rose-300">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
+              Task Title <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Design Database & Auth API"
+              className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
+              Description
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Detailed requirements, references, notes..."
+              className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+            />
+          </div>
+
+          {/* Row 2: Status & Priority */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
+                <Clock className="h-3.5 w-3.5 text-slate-400" />
+                <span>Status</span>
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+              >
+                <option value="To Do">To Do</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
+                <Flag className="h-3.5 w-3.5 text-slate-400" />
+                <span>Priority</span>
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+              >
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Row 3: Due Date & Assignee */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
+                <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                <span>Due Date</span>
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
+                <User className="h-3.5 w-3.5 text-slate-400" />
+                <span>Assignee</span>
+              </label>
+              <select
+                value={assigneeId}
+                onChange={(e) => setAssigneeId(e.target.value)}
+                className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 transition focus:border-purple-500 focus:bg-white focus:outline-hidden focus:ring-3 focus:ring-purple-500/15 dark:border-slate-800 dark:bg-[#141022] dark:text-white"
+              >
+                <option value="">-- Unassigned --</option>
+                {teamMembers.map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.user.name} ({member.user.email}) - {member.role}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Submit Actions */}
+          <div className="mt-6 flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md shadow-purple-500/25 transition hover:bg-purple-700 disabled:opacity-60"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  <span>{mode === "create" ? "Create Task" : "Save Changes"}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
+  );
+}
+
+export default function TaskModal(props: TaskModalProps) {
+  if (!props.isOpen) return null;
+  return (
+    <TaskModalDialog
+      key={`${props.mode}-${props.task?.id || "new"}`}
+      {...props}
+    />
   );
 }
