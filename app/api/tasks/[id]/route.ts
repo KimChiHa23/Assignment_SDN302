@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
+import { canEditTask, canDeleteTask, Role } from "@/lib/rbac";
+import { broadcastToTeam, broadcastToUser } from "@/lib/realtime-server";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// PUT /api/tasks/[id] - Cập nhật trạng thái, độ ưu tiên, người phụ trách, due date (Thành viên trong team đều có quyền)
-export async function PUT(request: Request, context: RouteParams) {
+// Handler dùng chung cho PUT và PATCH cập nhật task
+async function handleUpdateTask(request: Request, context: RouteParams) {
   try {
     const authUser = await getAuthUser(request);
     if (!authUser) {
@@ -18,7 +20,6 @@ export async function PUT(request: Request, context: RouteParams) {
     }
 
     const { id } = await context.params;
-
     if (!id) {
       return NextResponse.json(
         { success: false, error: "Task ID is required" },
@@ -26,11 +27,15 @@ export async function PUT(request: Request, context: RouteParams) {
       );
     }
 
-    // Find task with team info
+    // Tìm task cùng thông tin team và các thành viên
     const task = await prisma.task.findUnique({
       where: { id },
       include: {
-        team: true,
+        team: {
+          include: {
+            members: true,
+          },
+        },
       },
     });
 
@@ -41,20 +46,31 @@ export async function PUT(request: Request, context: RouteParams) {
       );
     }
 
-    // Check permissions: User must be a member or Owner of the team
-    const isOwner = task.team.ownerId === authUser.id;
-    const isMember = await prisma.teamMember.findUnique({
-      where: {
-        teamId_userId: {
-          teamId: task.teamId,
-          userId: authUser.id,
-        },
-      },
-    });
+    // Xác định vai trò của user trong team này
+    let userRole: Role | null = null;
+    if (task.team.ownerId === authUser.id) {
+      userRole = "OWNER";
+    } else {
+      const membership = task.team.members.find((m) => m.userId === authUser.id);
+      if (membership) {
+        userRole = membership.role as Role;
+      }
+    }
 
-    if (!isOwner && !isMember) {
+    if (!userRole) {
       return NextResponse.json(
-        { success: false, error: "You do not have permission to update tasks in this team" },
+        { success: false, error: "You do not have access to this team" },
+        { status: 403 }
+      );
+    }
+
+    // Kiểm tra RBAC: Member chỉ sửa task do mình tạo hoặc được gán
+    if (!canEditTask(userRole, task, authUser.id)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Permission denied. Members can only edit tasks created by or assigned to them.",
+        },
         { status: 403 }
       );
     }
@@ -69,16 +85,9 @@ export async function PUT(request: Request, context: RouteParams) {
       );
     }
 
-    // If changing assignee, verify new assignee belongs to team
+    // Nếu thay đổi người được gán, kiểm tra người đó có thuộc team không
     if (assigneeId) {
-      const isAssigneeInTeam = await prisma.teamMember.findUnique({
-        where: {
-          teamId_userId: {
-            teamId: task.teamId,
-            userId: assigneeId,
-          },
-        },
-      });
+      const isAssigneeInTeam = task.team.members.some((m) => m.userId === assigneeId);
       const isAssigneeOwner = task.team.ownerId === assigneeId;
 
       if (!isAssigneeInTeam && !isAssigneeOwner) {
@@ -109,6 +118,31 @@ export async function PUT(request: Request, context: RouteParams) {
       },
     });
 
+    // Nếu gán mới hoặc đổi assignee cho người khác, tạo Notification
+    if (
+      assigneeId &&
+      assigneeId !== task.assigneeId &&
+      assigneeId !== authUser.id
+    ) {
+      try {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: assigneeId,
+            type: "TASK_ASSIGNED",
+            title: "Task Assigned",
+            message: `You were assigned to task "${updatedTask.title}" in team "${task.team.name}" by ${authUser.name || "a teammate"}`,
+            link: `/teams/${task.teamId}`,
+          },
+        });
+        await broadcastToUser(assigneeId, "notification:new", notification);
+      } catch (notifErr) {
+        console.error("Error creating notification on task update:", notifErr);
+      }
+    }
+
+    // Phát sóng real-time tới tất cả thành viên trong team
+    await broadcastToTeam(task.teamId, "task:updated", updatedTask);
+
     return NextResponse.json({
       success: true,
       message: "Task updated successfully",
@@ -116,7 +150,7 @@ export async function PUT(request: Request, context: RouteParams) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error updating task";
-    console.error("PUT /api/tasks/[id] error:", error);
+    console.error("PUT/PATCH /api/tasks/[id] error:", error);
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
@@ -124,7 +158,15 @@ export async function PUT(request: Request, context: RouteParams) {
   }
 }
 
-// DELETE /api/tasks/[id] - Delete task (Strict permission: ONLY Creator, Assignee, or Team Owner)
+export async function PUT(request: Request, context: RouteParams) {
+  return handleUpdateTask(request, context);
+}
+
+export async function PATCH(request: Request, context: RouteParams) {
+  return handleUpdateTask(request, context);
+}
+
+// DELETE /api/tasks/[id] - Xóa task (Kiểm tra phân quyền RBAC nghiêm ngặt: Owner & Admin xóa được mọi task; Member chỉ xóa được task do mình tạo hoặc được gán)
 export async function DELETE(request: Request, context: RouteParams) {
   try {
     const authUser = await getAuthUser(request);
@@ -136,7 +178,6 @@ export async function DELETE(request: Request, context: RouteParams) {
     }
 
     const { id } = await context.params;
-
     if (!id) {
       return NextResponse.json(
         { success: false, error: "Task ID is required" },
@@ -147,7 +188,11 @@ export async function DELETE(request: Request, context: RouteParams) {
     const task = await prisma.task.findUnique({
       where: { id },
       include: {
-        team: true,
+        team: {
+          include: {
+            members: true,
+          },
+        },
       },
     });
 
@@ -158,20 +203,30 @@ export async function DELETE(request: Request, context: RouteParams) {
       );
     }
 
-    // Strict deletion rule:
-    // ONLY allowed for:
-    // 1. Task creator (creatorId === authUser.id)
-    // 2. Task assignee (assigneeId === authUser.id)
-    // 3. Team Owner (task.team.ownerId === authUser.id)
-    const isCreator = task.creatorId === authUser.id;
-    const isAssignee = task.assigneeId === authUser.id;
-    const isTeamOwner = task.team.ownerId === authUser.id;
+    // Xác định vai trò của user trong team
+    let userRole: Role | null = null;
+    if (task.team.ownerId === authUser.id) {
+      userRole = "OWNER";
+    } else {
+      const membership = task.team.members.find((m) => m.userId === authUser.id);
+      if (membership) {
+        userRole = membership.role as Role;
+      }
+    }
 
-    if (!isCreator && !isAssignee && !isTeamOwner) {
+    if (!userRole) {
+      return NextResponse.json(
+        { success: false, error: "You do not have access to this team" },
+        { status: 403 }
+      );
+    }
+
+    // Kiểm tra RBAC
+    if (!canDeleteTask(userRole, task, authUser.id)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Permission denied. Only the task creator, assignee, or team owner can delete this task.",
+          error: "Permission denied. Only Owner, Admin, or the task creator/assignee can delete this task.",
         },
         { status: 403 }
       );
@@ -181,9 +236,16 @@ export async function DELETE(request: Request, context: RouteParams) {
       where: { id },
     });
 
+    // Phát sóng real-time xóa task tới các client trong team
+    await broadcastToTeam(task.teamId, "task:deleted", {
+      taskId: id,
+      teamId: task.teamId,
+    });
+
     return NextResponse.json({
       success: true,
       message: "Task deleted successfully",
+      data: { id, teamId: task.teamId },
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Error deleting task";

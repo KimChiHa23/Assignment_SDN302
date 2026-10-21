@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
+import { canInviteMember, Role } from "@/lib/rbac";
+import { broadcastToTeam, broadcastToUser } from "@/lib/realtime-server";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// POST /api/teams/[id]/members - Thêm thành viên vào team bằng email nhập vào (Chỉ Owner có quyền, gán role "MEMBER")
+// POST /api/teams/[id]/members - Thêm thành viên vào team bằng email (Owner & Admin có quyền, gán role "MEMBER")
 export async function POST(request: Request, context: RouteParams) {
   try {
     const authUser = await getAuthUser(request);
@@ -20,6 +22,9 @@ export async function POST(request: Request, context: RouteParams) {
     const { id: teamId } = await context.params;
     const team = await prisma.team.findUnique({
       where: { id: teamId },
+      include: {
+        members: true,
+      },
     });
 
     if (!team) {
@@ -29,10 +34,21 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    // Role check: ONLY Owner can add members
-    if (team.ownerId !== authUser.id) {
+    // Xác định vai trò của người thực hiện hành động
+    let actorRole: Role | null = null;
+    if (team.ownerId === authUser.id) {
+      actorRole = "OWNER";
+    } else {
+      const actorMember = team.members.find((m) => m.userId === authUser.id);
+      if (actorMember) {
+        actorRole = actorMember.role as Role;
+      }
+    }
+
+    // Role check: Cả Owner và Admin đều có quyền mời thành viên mới
+    if (!canInviteMember(actorRole)) {
       return NextResponse.json(
-        { success: false, error: "Only the team Owner can add new members" },
+        { success: false, error: "Permission denied. Only Owner and Admin can add members." },
         { status: 403 }
       );
     }
@@ -62,7 +78,14 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    // Check if user is already a member
+    // Check if user is already a member or owner
+    if (targetUser.id === team.ownerId) {
+      return NextResponse.json(
+        { success: false, error: "This user is already the Owner of this team" },
+        { status: 400 }
+      );
+    }
+
     const existingMember = await prisma.teamMember.findUnique({
       where: {
         teamId_userId: {
@@ -92,6 +115,23 @@ export async function POST(request: Request, context: RouteParams) {
         },
       },
     });
+
+    // Tự động tạo bản ghi Notification (TEAM_INVITED)
+    const notification = await prisma.notification.create({
+      data: {
+        userId: targetUser.id,
+        type: "TEAM_INVITED",
+        title: "Team Invitation",
+        message: `You were added to team "${team.name}" by ${authUser.name || "a team member"}`,
+        link: `/teams/${teamId}`,
+      },
+    });
+
+    // Phát sóng real-time thông báo tới target user
+    await broadcastToUser(targetUser.id, "notification:new", notification);
+
+    // Phát sóng real-time cho team (thành viên mới gia nhập)
+    await broadcastToTeam(teamId, "member:added", newMember);
 
     return NextResponse.json(
       {

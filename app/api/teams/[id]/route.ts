@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
+import { broadcastToTeam } from "@/lib/realtime-server";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -145,6 +146,8 @@ export async function PUT(request: Request, context: RouteParams) {
       },
     });
 
+    await broadcastToTeam(id, "team:updated", updatedTeam);
+
     return NextResponse.json({
       success: true,
       message: "Team updated successfully",
@@ -197,6 +200,8 @@ export async function DELETE(request: Request, context: RouteParams) {
     await prisma.team.delete({
       where: { id },
     });
+
+    await broadcastToTeam(id, "team:deleted", { id });
 
     return NextResponse.json({
       success: true,

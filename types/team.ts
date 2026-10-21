@@ -1,6 +1,6 @@
 import { TaskItem } from "./task";
 
-export type TeamRole = "OWNER" | "MEMBER";
+export type TeamRole = "OWNER" | "ADMIN" | "MEMBER";
 
 export interface TeamMemberItem {
   id: string;

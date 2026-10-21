@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth";
+import { broadcastToTeam, broadcastToUser } from "@/lib/realtime-server";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -68,7 +69,7 @@ export async function GET(request: Request, context: RouteParams) {
   }
 }
 
-// POST /api/teams/[id]/tasks - Create a new task in team
+// POST /api/teams/[id]/tasks - Tạo task mới trong team
 export async function POST(request: Request, context: RouteParams) {
   try {
     const authUser = await getAuthUser(request);
@@ -81,7 +82,6 @@ export async function POST(request: Request, context: RouteParams) {
 
     const { id: teamId } = await context.params;
 
-    // Check permissions: User must be a member or Owner of the team
     const team = await prisma.team.findUnique({
       where: { id: teamId },
       include: {
@@ -114,7 +114,7 @@ export async function POST(request: Request, context: RouteParams) {
       );
     }
 
-    // If assigneeId is provided, check if assignee belongs to team
+    // Verify assignee belongs to team if provided
     if (assigneeId) {
       const isAssigneeInTeam = await prisma.teamMember.findUnique({
         where: {
@@ -135,7 +135,7 @@ export async function POST(request: Request, context: RouteParams) {
       }
     }
 
-    // Create task with creatorId
+    // Create task
     const newTask = await prisma.task.create({
       data: {
         title: title.trim(),
@@ -156,6 +156,27 @@ export async function POST(request: Request, context: RouteParams) {
         },
       },
     });
+
+    // Tự động tạo Notification nếu có gán task cho người khác
+    if (assigneeId && assigneeId !== authUser.id) {
+      try {
+        const notification = await prisma.notification.create({
+          data: {
+            userId: assigneeId,
+            type: "TASK_ASSIGNED",
+            title: "Task Assigned",
+            message: `You were assigned to task "${newTask.title}" in team "${team.name}" by ${authUser.name || "a teammate"}`,
+            link: `/teams/${teamId}`,
+          },
+        });
+        await broadcastToUser(assigneeId, "notification:new", notification);
+      } catch (notifErr) {
+        console.error("Error creating notification:", notifErr);
+      }
+    }
+
+    // Phát sóng real-time tới tất cả thành viên trong team
+    await broadcastToTeam(teamId, "task:created", newTask);
 
     return NextResponse.json(
       {
