@@ -284,7 +284,7 @@ export default function TeamChat({
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
-              className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-purple-500 focus:bg-white focus:outline-hidden dark:border-slate-800 dark:bg-[#141022] dark:text-white dark:focus:border-purple-600 dark:placeholder:text-slate-500 max-h-28"
+              className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-purple-500 focus:bg-white focus:outline-hidden dark:border-slate-800 dark:bg-[#141022] dark:focus:bg-[#1f1838] dark:text-white dark:focus:border-purple-500 dark:placeholder:text-slate-400 max-h-28"
             />
           </div>
 
