@@ -16,6 +16,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -148,6 +149,8 @@ export default function Navbar() {
                               className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${
                                 t.currentUserRole === "OWNER"
                                   ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                  : t.currentUserRole === "ADMIN"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
                                   : "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300"
                               }`}
                             >
@@ -170,6 +173,9 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
+
+              {/* Notification Bell */}
+              <NotificationBell />
 
               {/* User Profile Badge / Menu */}
               <div className="relative" ref={userMenuRef}>
@@ -253,8 +259,9 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile menu button */}
-        <div className="flex md:hidden">
+        {/* Mobile menu button and Bell */}
+        <div className="flex items-center gap-2 md:hidden">
+          {user && <NotificationBell />}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -265,6 +272,7 @@ export default function Navbar() {
           </button>
         </div>
       </div>
+
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
